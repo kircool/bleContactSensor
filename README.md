@@ -1,0 +1,36 @@
+Ble contact senosor based on esp32-c3 (fully vibecoded)
+Uses GPIO4
+Algoritm:
+power on
+send status
+go to deep sleep
+on event 
+  rise up
+  send status
+  go to deep sleep
+
+You need second esp32 to capture packets
+esphome example
+
+esp32_ble_tracker:
+  on_ble_advertise:
+    - mac_address: "11:22:33:44:55:66" #sensor mac address
+      then:
+        - lambda: |-
+            for (auto data : x.get_manufacturer_datas()) {
+              std::string uuid_str = data.uuid.to_string();
+              ESP_LOGD("ble_sensor", "Received UUID: %s", uuid_str.c_str());
+              if (uuid_str == "0xFFFF") {
+                if (!data.data.empty()) {
+                  bool is_open = (data.data[0] == 0x01);
+                  id(door_sensor).publish_state(is_open);
+                  ESP_LOGI("ble_sensor", "Door state updated: %s", is_open ? "OPEN" : "CLOSED");
+                }
+              }
+            } 
+            
+binary_sensor: 
+  - platform: template
+    name: "Gate Opening Sensor"
+    id: door_sensor
+    device_class: door      
